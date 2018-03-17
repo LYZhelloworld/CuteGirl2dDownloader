@@ -46,14 +46,16 @@ def process_result(result_dict, result, timestamp_start, timestamp_end):
 		else:
 			illustrator = None
 		if r.media:
-			# Only process first media (since this account posts one image per tweet only)
-			m = r.media[0]
-			media_url = process_media(m, illustrator)
-			if media_url:
-				result_dict[r.id] = (media_url, illustrator, m.id, process_datetime(r.created_at_in_seconds))
+			# Since the account sometimes posts multiple images in one tweet, we need to use list here.
+			if not r.id in result_dict:
+				result_dict[r.id] = []
+			for m in r.media:
+				media_url = process_media(m)
+				if media_url:
+					result_dict[r.id].append((media_url, illustrator, m.id, process_datetime(r.created_at_in_seconds)))
 	return result[-1].id # Last id
 
-def process_media(media, illustrator):
+def process_media(media):
 	'Get URL of the media. Non-image resources will be ignored.'
 	if not media:
 		return None
@@ -76,16 +78,17 @@ def save_images(result_dict, saving_path):
 	if not os.path.exists(saving_path):
 		os.makedirs(saving_path)
 	for key in result_dict:
-		filename = gen_filename(illustrator=result_dict[key][1], date=result_dict[key][3], media_id=result_dict[key][2])
-		url = result_dict[key][0]
-		req = urllib.request.urlopen(url)
-		with open(saving_path + '\\' + filename, 'wb') as fp:
-			while True:
-				buf = req.read(buffer_size)
-				if not buf:
-					break
-				fp.write(buf)
-		print('Download complete: ' + filename)
+		for item in result_dict[key]:
+			filename = gen_filename(illustrator=item[1], date=item[3], media_id=item[2])
+			url = item[0]
+			req = urllib.request.urlopen(url)
+			with open(saving_path + '\\' + filename, 'wb') as fp:
+				while True:
+					buf = req.read(buffer_size)
+					if not buf:
+						break
+					fp.write(buf)
+			print('Download complete: ' + filename)
 
 if __name__ == '__main__':
 	get_images(result_dict, timestamp_start, timestamp_end)

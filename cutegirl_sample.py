@@ -67,11 +67,13 @@ def process_datetime(timestamp):
 	'Convert timestamp into YYMMDDhhmmss.'
 	return datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y%m%d%H%M%S')
 
-def gen_filename(illustrator, date, media_id):
+def gen_filename(root, illustrator, date, media_id):
 	'Generate filename: [Date][Illustrator]ID.jpg. Illustrator will be "Unknown Illustrator" if N/A.'
+	illustrator_path = illustrator
 	if illustrator is None:
 		illustrator = 'Unknown Illustrator'
-	return '[{date}][{illustrator}]{media_id}.jpg'.format(illustrator=illustrator, date=date, media_id=media_id)
+		illustrator_path = ''
+	return os.path.join(root, illustrator_path, '[{date}][{illustrator}]{media_id}.jpg'.format(illustrator=illustrator, date=date, media_id=media_id))
 
 def save_images(result_dict, saving_path):
 	'Download images from the links.'
@@ -79,10 +81,12 @@ def save_images(result_dict, saving_path):
 		os.makedirs(saving_path)
 	for key in result_dict:
 		for item in result_dict[key]:
-			filename = gen_filename(illustrator=item[1], date=item[3], media_id=item[2])
+			filename = gen_filename(root=saving_path, illustrator=item[1], date=item[3], media_id=item[2])
 			url = item[0]
 			req = urllib.request.urlopen(url)
-			with open(saving_path + '\\' + filename, 'wb') as fp:
+			if not os.path.exists(os.path.dirname(filename)):
+				os.makedirs(os.path.dirname(filename))
+			with open(filename, 'wb') as fp:
 				while True:
 					buf = req.read(buffer_size)
 					if not buf:
